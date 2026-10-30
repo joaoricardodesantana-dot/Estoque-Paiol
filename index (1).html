@@ -1,0 +1,2731 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+</head>
+
+<body>
+  
+</body>
+
+</html>```html
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle de Estoque - Açougue & Comércio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            800: '#9f1239',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Touch scroll e UI mobile ajustes */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        /* Ocultar barra de rolagem mas manter funcionalidade */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-20 select-none">
+
+    <!-- Header fixo superior -->
+    <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-brand-600/20 text-brand-500 rounded-xl border border-brand-500/30">
+                <i data-lucide="beef" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight text-white">Estoque Carne & Cia</h1>
+                <p class="text-xs text-slate-400">Controle na palma da mão</p>
+            </div>
+        </div>
+        <div class="flex gap-1">
+            <button onclick="exportWhatsAppReport()" title="Enviar Relatório WhatsApp" class="p-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 active:scale-95 transition">
+                <i data-lucide="share-2" class="w-5 h-5"></i>
+            </button>
+            <button onclick="openBackupModal()" title="Backup e Dados" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 transition">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo principal -->
+    <main class="p-4 max-w-lg mx-auto space-y-4">
+
+        <!-- Cards de Resumo (Dashboard) -->
+        <section class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Itens</span>
+                <span id="stat-total-items" class="text-xl font-black text-white mt-0.5">0</span>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Total em Kg</span>
+                <span id="stat-total-weight" class="text-xl font-black text-emerald-400 mt-0.5">0.0</span>
+            </div>
+            <div onclick="filterLowStockToggle()" class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center cursor-pointer active:bg-slate-800 transition relative">
+                <span class="text-xs text-slate-400 font-medium">Baixo Est.</span>
+                <span id="stat-low-stock" class="text-xl font-black text-rose-500 mt-0.5">0</span>
+                <span id="low-stock-dot" class="hidden absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            </div>
+        </section>
+
+        <!-- Barra de Busca e Filtros -->
+        <section class="space-y-2">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" placeholder="Buscar corte ou produto..." 
+                    oninput="renderProducts()"
+                    class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition">
+            </div>
+
+            <!-- Filtro de Categorias Horizontal -->
+            <div id="category-pills" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <button onclick="selectCategory('Todos')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500">
+                    Todos
+                </button>
+                <button onclick="selectCategory('Bovinos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Bovinos
+                </button>
+                <button onclick="selectCategory('Suínos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Suínos
+                </button>
+                <button onclick="selectCategory('Aves')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Aves
+                </button>
+                <button onclick="selectCategory('Embutidos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Embutidos
+                </button>
+                <button onclick="selectCategory('Outros')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Outros
+                </button>
+            </div>
+        </section>
+
+        <!-- Lista de Produtos -->
+        <section class="space-y-3" id="products-list">
+            <!-- Renderizado dinamicamente via JavaScript -->
+        </section>
+
+        <!-- Estado Vazio -->
+        <div id="empty-state" class="hidden text-center py-10 space-y-3">
+            <div class="inline-flex p-4 bg-slate-900 rounded-full border border-slate-800 text-slate-500">
+                <i data-lucide="package-open" class="w-10 h-10"></i>
+            </div>
+            <p class="text-sm text-slate-400">Nenhum produto encontrado com os filtros atuais.</p>
+        </div>
+
+    </main>
+
+    <!-- NAVEGAÇÃO FIXA INFERIOR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-30">
+        <div class="max-w-lg mx-auto flex justify-around items-center py-2 px-4">
+            <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="flex flex-col items-center gap-1 text-brand-500">
+                <i data-lucide="boxes" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Estoque</span>
+            </button>
+            
+            <button onclick="openProductModal()" class="flex items-center justify-center w-12 h-12 rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/40 active:scale-90 transition -mt-5 border-4 border-slate-950">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+
+            <button onclick="switchTab('logs')" id="tab-btn-logs" class="flex flex-col items-center gap-1 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Histórico</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: HISTÓRICO DE MOVIMENTAÇÕES -->
+    <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex flex-col justify-end">
+        <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-brand-500"></i> Histórico de Entradas e Saídas
+                </h3>
+                <button onclick="closeModal('modal-logs')" class="p-1 rounded-lg text-slate-400 active:bg-slate-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div id="logs-container" class="overflow-y-auto no-scrollbar py-3 space-y-2 flex-1 my-2">
+                <!-- Logs são gerados dinamicamente -->
+            </div>
+
+            <button onclick="clearLogs()" class="w-full py-2 text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl active:bg-rose-500/20">
+                Limpar Todo o Histórico
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRAR / EDITAR PRODUTO -->
+    <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="modal-product-title" class="font-bold text-lg text-white">Cadastrar Novo Produto</h3>
+                <button onclick="closeModal('modal-product')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <form id="product-form" onsubmit="handleSaveProduct(event)" class="space-y-3">
+                <input type="hidden" id="prod-id">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome do Corte / Produto *</label>
+                    <input type="text" id="prod-name" required placeholder="Ex: Picanha Premium, Alcatra..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Categoria *</label>
+                        <select id="prod-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Bovinos">Bovinos</option>
+                            <option value="Suínos">Suínos</option>
+                            <option value="Aves">Aves</option>
+                            <option value="Embutidos">Embutidos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Unidade *</label>
+                        <select id="prod-unit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Kg">Quilograma (Kg)</option>
+                            <option value="Unid">Unidade (Unid)</option>
+                            <option value="Pacote">Pacote</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Inicial</label>
+                        <input type="number" step="0.001" min="0" id="prod-stock" placeholder="0.000" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Mínimo (Alerta)</label>
+                        <input type="number" step="0.01" min="0" id="prod-min" placeholder="5.0" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Preço por Kg / Unidade (R$)</label>
+                    <input type="number" step="0.01" min="0" id="prod-price" placeholder="0.00" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeModal('modal-product')" class="w-1/2 py-3 rounded-xl border border-slate-800 text-slate-300 font-semibold text-sm active:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="w-1/2 py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                        Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AJUSTE RÁPIDO DE MOVIMENTAÇÃO -->
+    <div id="modal-adjust" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div>
+                    <h3 id="adjust-prod-name" class="font-bold text-base text-white">Nome do Produto</h3>
+                    <p id="adjust-prod-current" class="text-xs text-slate-400">Atual: 0 Kg</p>
+                </div>
+                <button onclick="closeModal('modal-adjust')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="adjust-prod-id">
+
+            <!-- Seleção de Operação -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button type="button" id="type-entry" onclick="setAdjustType('entry')" 
+                    class="py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition">
+                    + ENTRADA
+                </button>
+                <button type="button" id="type-exit" onclick="setAdjustType('exit')" 
+                    class="py-2 text-xs font-bold rounded-lg text-slate-400 transition">
+                    - SAÍDA
+                </button>
+            </div>
+
+            <!-- Botões de Atalho Rápido -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Atalhos de Ajuste Rápido</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="quickAddValue(0.25)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.25</button>
+                    <button onclick="quickAddValue(0.5)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.5</button>
+                    <button onclick="quickAddValue(1.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+1.0</button>
+                    <button onclick="quickAddValue(5.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+5.0</button>
+                </div>
+            </div>
+
+            <!-- Campo Digitação Livre -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Quantidade para alterar</label>
+                <input type="number" step="0.001" min="0.001" id="adjust-amount" placeholder="Digite o valor..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base text-white font-bold text-center focus:outline-none focus:border-brand-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Observação (Opcional)</label>
+                <input type="text" id="adjust-obs" placeholder="Ex: Compra fornecedor, Reposição, Venda..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+            </div>
+
+            <button onclick="confirmStockAdjustment()" class="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                Confirmar Alteração
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: BACKUP E DADOS -->
+    <div id="modal-backup" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Gerenciar Dados</h3>
+                <button onclick="closeModal('modal-backup')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">Faça o backup dos seus produtos e histórico ou restaure um arquivo baixado previamente.</p>
+
+            <div class="space-y-2">
+                <button onclick="exportJSONBackup()" class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition">
+                    <i data-lucide="download" class="w-4 h-4"></i> Baixar Arquivo Backup (JSON)
+                </button>
+
+                <label class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Importar Arquivo Backup
+                    <input type="file" id="import-file" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+                </label>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <button onclick="resetDataToDemo()" class="w-full py-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl font-semibold">
+```html
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle de Estoque - Açougue & Comércio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            800: '#9f1239',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Touch scroll e UI mobile ajustes */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        /* Ocultar barra de rolagem mas manter funcionalidade */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-20 select-none">
+
+    <!-- Header fixo superior -->
+    <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-brand-600/20 text-brand-500 rounded-xl border border-brand-500/30">
+                <i data-lucide="beef" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight text-white">Estoque Carne & Cia</h1>
+                <p class="text-xs text-slate-400">Controle na palma da mão</p>
+            </div>
+        </div>
+        <div class="flex gap-1">
+            <button onclick="exportWhatsAppReport()" title="Enviar Relatório WhatsApp" class="p-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 active:scale-95 transition">
+                <i data-lucide="share-2" class="w-5 h-5"></i>
+            </button>
+            <button onclick="openBackupModal()" title="Backup e Dados" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 transition">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo principal -->
+    <main class="p-4 max-w-lg mx-auto space-y-4">
+
+        <!-- Cards de Resumo (Dashboard) -->
+        <section class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Itens</span>
+                <span id="stat-total-items" class="text-xl font-black text-white mt-0.5">0</span>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Total em Kg</span>
+                <span id="stat-total-weight" class="text-xl font-black text-emerald-400 mt-0.5">0.0</span>
+            </div>
+            <div onclick="filterLowStockToggle()" class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center cursor-pointer active:bg-slate-800 transition relative">
+                <span class="text-xs text-slate-400 font-medium">Baixo Est.</span>
+                <span id="stat-low-stock" class="text-xl font-black text-rose-500 mt-0.5">0</span>
+                <span id="low-stock-dot" class="hidden absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            </div>
+        </section>
+
+        <!-- Barra de Busca e Filtros -->
+        <section class="space-y-2">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" placeholder="Buscar corte ou produto..." 
+                    oninput="renderProducts()"
+                    class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition">
+            </div>
+
+            <!-- Filtro de Categorias Horizontal -->
+            <div id="category-pills" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <button onclick="selectCategory('Todos')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500">
+                    Todos
+                </button>
+                <button onclick="selectCategory('Bovinos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Bovinos
+                </button>
+                <button onclick="selectCategory('Suínos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Suínos
+                </button>
+                <button onclick="selectCategory('Aves')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Aves
+                </button>
+                <button onclick="selectCategory('Embutidos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Embutidos
+                </button>
+                <button onclick="selectCategory('Outros')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Outros
+                </button>
+            </div>
+        </section>
+
+        <!-- Lista de Produtos -->
+        <section class="space-y-3" id="products-list">
+            <!-- Renderizado dinamicamente via JavaScript -->
+        </section>
+
+        <!-- Estado Vazio -->
+        <div id="empty-state" class="hidden text-center py-10 space-y-3">
+            <div class="inline-flex p-4 bg-slate-900 rounded-full border border-slate-800 text-slate-500">
+                <i data-lucide="package-open" class="w-10 h-10"></i>
+            </div>
+            <p class="text-sm text-slate-400">Nenhum produto encontrado com os filtros atuais.</p>
+        </div>
+
+    </main>
+
+    <!-- NAVEGAÇÃO FIXA INFERIOR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-30">
+        <div class="max-w-lg mx-auto flex justify-around items-center py-2 px-4">
+            <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="flex flex-col items-center gap-1 text-brand-500">
+                <i data-lucide="boxes" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Estoque</span>
+            </button>
+            
+            <button onclick="openProductModal()" class="flex items-center justify-center w-12 h-12 rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/40 active:scale-90 transition -mt-5 border-4 border-slate-950">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+
+            <button onclick="switchTab('logs')" id="tab-btn-logs" class="flex flex-col items-center gap-1 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Histórico</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: HISTÓRICO DE MOVIMENTAÇÕES -->
+    <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex flex-col justify-end">
+        <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-brand-500"></i> Histórico de Entradas e Saídas
+                </h3>
+                <button onclick="closeModal('modal-logs')" class="p-1 rounded-lg text-slate-400 active:bg-slate-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div id="logs-container" class="overflow-y-auto no-scrollbar py-3 space-y-2 flex-1 my-2">
+                <!-- Logs são gerados dinamicamente -->
+            </div>
+
+            <button onclick="clearLogs()" class="w-full py-2 text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl active:bg-rose-500/20">
+                Limpar Todo o Histórico
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRAR / EDITAR PRODUTO -->
+    <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="modal-product-title" class="font-bold text-lg text-white">Cadastrar Novo Produto</h3>
+                <button onclick="closeModal('modal-product')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <form id="product-form" onsubmit="handleSaveProduct(event)" class="space-y-3">
+                <input type="hidden" id="prod-id">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome do Corte / Produto *</label>
+                    <input type="text" id="prod-name" required placeholder="Ex: Picanha Premium, Alcatra..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Categoria *</label>
+                        <select id="prod-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Bovinos">Bovinos</option>
+                            <option value="Suínos">Suínos</option>
+                            <option value="Aves">Aves</option>
+                            <option value="Embutidos">Embutidos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Unidade *</label>
+                        <select id="prod-unit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Kg">Quilograma (Kg)</option>
+                            <option value="Unid">Unidade (Unid)</option>
+                            <option value="Pacote">Pacote</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Inicial</label>
+                        <input type="number" step="0.001" min="0" id="prod-stock" placeholder="0.000" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Mínimo (Alerta)</label>
+                        <input type="number" step="0.01" min="0" id="prod-min" placeholder="5.0" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Preço por Kg / Unidade (R$)</label>
+                    <input type="number" step="0.01" min="0" id="prod-price" placeholder="0.00" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeModal('modal-product')" class="w-1/2 py-3 rounded-xl border border-slate-800 text-slate-300 font-semibold text-sm active:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="w-1/2 py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                        Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AJUSTE RÁPIDO DE MOVIMENTAÇÃO -->
+    <div id="modal-adjust" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div>
+                    <h3 id="adjust-prod-name" class="font-bold text-base text-white">Nome do Produto</h3>
+                    <p id="adjust-prod-current" class="text-xs text-slate-400">Atual: 0 Kg</p>
+                </div>
+                <button onclick="closeModal('modal-adjust')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="adjust-prod-id">
+
+            <!-- Seleção de Operação -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button type="button" id="type-entry" onclick="setAdjustType('entry')" 
+                    class="py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition">
+                    + ENTRADA
+                </button>
+                <button type="button" id="type-exit" onclick="setAdjustType('exit')" 
+                    class="py-2 text-xs font-bold rounded-lg text-slate-400 transition">
+                    - SAÍDA
+                </button>
+            </div>
+
+            <!-- Botões de Atalho Rápido -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Atalhos de Ajuste Rápido</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="quickAddValue(0.25)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.25</button>
+                    <button onclick="quickAddValue(0.5)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.5</button>
+                    <button onclick="quickAddValue(1.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+1.0</button>
+                    <button onclick="quickAddValue(5.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+5.0</button>
+                </div>
+            </div>
+
+            <!-- Campo Digitação Livre -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Quantidade para alterar</label>
+                <input type="number" step="0.001" min="0.001" id="adjust-amount" placeholder="Digite o valor..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base text-white font-bold text-center focus:outline-none focus:border-brand-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Observação (Opcional)</label>
+                <input type="text" id="adjust-obs" placeholder="Ex: Compra fornecedor, Reposição, Venda..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+            </div>
+
+            <button onclick="confirmStockAdjustment()" class="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                Confirmar Alteração
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: BACKUP E DADOS -->
+    <div id="modal-backup" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Gerenciar Dados</h3>
+                <button onclick="closeModal('modal-backup')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">Faça o backup dos seus produtos e histórico ou restaure um arquivo baixado previamente.</p>
+
+            <div class="space-y-2">
+                <button onclick="exportJSONBackup()" class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition">
+                    <i data-lucide="download" class="w-4 h-4"></i> Baixar Arquivo Backup (JSON)
+                </button>
+
+                <label class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Importar Arquivo Backup
+                    <input type="file" id="import-file" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+                </label>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <button onclick="resetDataToDemo()" class="w-full py-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl font-semibold">
+                Restaurar Dados Exemplo (Açougue)
+            </button>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST SIMPLES -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-full border border-slate-700 shadow-2xl z-50 transition duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-brand-500"></i>
+        <span id="toast-msg">Mensagem</span>
+    </div>
+
+    <!-- SCRIPT DA APLICAÇÃO -->
+    <script>
+        // --- DADOS INICIAIS DE EXEMPLO PARA AÇOUGUE ---
+        const DEMO_PRODUCTS = [
+            { id: "1", name: "Picanha Bov. Grill", category: "Bovinos", unit: "Kg", stock: 12.5, minStock: 5.0, price: 79.90 },
+            { id: "2", name: "Alcatra com Maminha", category: "Bovinos", unit: "Kg", stock: 8.2, minStock: 10.0, price: 44.90 },
+            { id: "3", name: "Linguiça Toscana", category: "Embutidos", unit: "Kg", stock: 25.0, minStock: 8.0, price: 22.90 },
+            { id: "4", name: "Costela Suína", category: "Suínos", unit: "Kg", stock: 3.4, minStock: 6.0, price: 28.50 },
+            { id: "5", name: "Coxa e Sobrecoxa", category: "Aves", unit: "Kg", stock: 18.0, minStock: 10.0, price: 13.90 }
+        ];
+
+        const DEMO_LOGS = [
+            { id: "l1", prodName: "Picanha Bov. Grill", type: "entry", amount: 15, unit: "Kg", obs: "Carga Inicial", date: new Date().toLocaleString("pt-BR") }
+        ];
+
+        // ESTADO GLOBAL
+        let products = JSON.parse(localStorage.getItem('meat_stock_products')) || DEMO_PRODUCTS;
+        let logs = JSON.parse(localStorage.getItem('meat_stock_logs')) || DEMO_LOGS;
+        let currentCategory = 'Todos';
+        let filterOnlyLowStock = false;
+        let currentAdjustType = 'entry';
+
+        // INICIALIZAÇÃO
+        window.addEventListener('DOMContentLoaded', () => {
+            renderProducts();
+            renderLogs();
+            updateStats();
+            lucide.createIcons();
+        });
+
+        // SALVAR DADOS
+        function saveData() {
+            localStorage.setItem('meat_stock_products', JSON.stringify(products));
+            localStorage.setItem('meat_stock_logs', JSON.stringify(logs));
+            updateStats();
+        }
+
+        // --- DASHBOARD / STATS ---
+        function updateStats() {
+            const totalItems = products.length;
+            const totalWeight = products.reduce((acc, p) => acc + (parseFloat(p.stock) || 0), 0);
+            const lowStockCount = products.filter(p => parseFloat(p.stock) <= parseFloat(p.minStock)).length;
+
+            document.getElementById('stat-total-items').innerText = totalItems;
+            document.getElementById('stat-total-weight').innerText = totalWeight.toFixed(1);
+            document.getElementById('stat-low-stock').innerText = lowStockCount;
+
+            const dot = document.getElementById('low-stock-dot');
+            if(lowStockCount > 0) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+        }
+
+        // --- RENDERIZAR LISTA DE PRODUTOS ---
+        function renderProducts() {
+            const container = document.getElementById('products-list');
+            const emptyState = document.getElementById('empty-state');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+
+            let filtered = products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(searchVal);
+                const matchCategory = (currentCategory === 'Todos') || (p.category === currentCategory);
+                const matchLowStock = !filterOnlyLowStock || (parseFloat(p.stock) <= parseFloat(p.minStock));
+                return matchSearch && matchCategory && matchLowStock;
+            });
+
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach(p => {
+                const isLow = parseFloat(p.stock) <= parseFloat(p.minStock);
+                
+                const card = document.createElement('div');
+                card.className = `bg-slate-900 border ${isLow ? 'border-rose-500/50 bg-rose-950/10' : 'border-slate-800'} rounded-2xl p-4 transition space-y-3`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">${p.category}</span>
+                                ${isLow ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> Estoque Baixo</span>` : ''}
+                            </div>
+                            <h2 class="font-bold text-white text-base mt-1">${p.name}</h2>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="openProductModal('${p.id}')" class="p-2 text-slate-400 hover:text-white rounded-lg active:bg-slate-800">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteProduct('${p.id}')" class="p-2 text-rose-400/70 hover:text-rose-400 rounded-lg active:bg-slate-800">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                        <div>
+                            <span class="text-xs text-slate-400 block">Preço un/kg</span>
+                            <span class="text-sm font-semibold text-slate-200">R$ ${parseFloat(p.price || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">Em Estoque</span>
+                            <span class="text-xl font-black ${isLow ? 'text-rose-400' : 'text-emerald-400'}">${parseFloat(p.stock).toFixed(2)} <span class="text-xs font-normal text-slate-400">${p.unit}</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Botões Ação Rápida -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="openAdjustModal('${p.id}', 'entry')" class="py-2.5 px-3 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:bg-emerald-600 active:text-white transition">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Dar Entrada
+                        </button>
+                        <button onclick="openAdjustModal('${p.id}', 'exit')" class="py-2.5 px-3 bg-rose-600/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:bg-rose-600 active:text-white transition">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i> Dar Saída
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // --- FILTROS DE CATEGORIA ---
+        function selectCategory(cat) {
+            currentCategory = cat;
+            filterOnlyLowStock = false;
+            
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if(btn.innerText.trim() === cat) {
+                    btn.className = "cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500";
+                } else {
+                    btn.className = "cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800";
+                }
+            });
+
+            renderProducts();
+        }
+
+        function filterLowStockToggle() {
+            filterOnlyLowStock = !filterOnlyLowStock;
+            showToast(filterOnlyLowStock ? "Exibindo apenas Estoque Baixo" : "Exibindo todos os produtos");
+            renderProducts();
+        }
+
+        // --- MODAL DE PRODUTO (CRIAR/EDITAR) ---
+        function openProductModal(id = null) {
+            const form = document.getElementById('product-form');
+            form.reset();
+
+            if (id) {
+                const prod = products.find(p => p.id === id);
+                if (!prod) return;
+                document.getElementById('modal-product-title').innerText = "Editar Produto";
+                document.getElementById('prod-id').value = prod.id;
+                document.getElementById('prod-name').value = prod.name;
+                document.getElementById('prod-category').value = prod.category;
+                document.getElementById('prod-unit').value = prod.unit;
+                document.getElementById('prod-stock').value = prod.stock;
+                document.getElementById('prod-min').value = prod.minStock;
+                document.getElementById('prod-price').value = prod.price || '';
+            } else {
+                document.getElementById('modal-product-title').innerText = "Cadastrar Novo Produto";
+                document.getElementById('prod-id').value = '';
+            }
+
+            document.getElementById('modal-product').classList.remove('hidden');
+        }
+
+        function handleSaveProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value.trim();
+            const category = document.getElementById('prod-category').value;
+            const unit = document.getElementById('prod-unit').value;
+            const stock = parseFloat(document.getElementById('prod-stock').value) || 0;
+            const minStock = parseFloat(document.getElementById('prod-min').value) || 0;
+            const price = parseFloat(document.getElementById('prod-price').value) || 0;
+
+            if (id) {
+                // Editar existente
+                const index = products.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    products[index] = { ...products[index], name, category, unit, stock, minStock, price };
+                    showToast("Produto atualizado com sucesso!");
+                }
+            } else {
+                // Criar novo
+                const newProd = {
+                    id: Date.now().toString(),
+                    name,
+                    category,
+                    unit,
+                    stock,
+                    minStock,
+                    price
+                };
+                products.push(newProd);
+                showToast("Novo produto cadastrado!");
+            }
+
+            saveData();
+            renderProducts();
+            closeModal('modal-product');
+        }
+
+        function deleteProduct(id) {
+            if(confirm("Deseja realmente excluir este produto do estoque?")) {
+                products = products.filter(p => p.id !== id);
+                saveData();
+                renderProducts();
+                showToast("Produto removido!");
+            }
+        }
+
+        // --- MODAL DE AJUSTE RÁPIDO DE ESTOQUE ---
+        function openAdjustModal(id, type = 'entry') {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            document.getElementById('adjust-prod-id').value = prod.id;
+            document.getElementById('adjust-prod-name').innerText = prod.name;
+            document.getElementById('adjust-prod-current').innerText = `Estoque Atual: ${prod.stock.toFixed(2)} ${prod.unit}`;
+            document.getElementById('adjust-amount').value = '';
+            document.getElementById('adjust-obs').value = '';
+
+            setAdjustType(type);
+            document.getElementById('modal-adjust').classList.remove('hidden');
+        }
+
+        function setAdjustType(type) {
+            currentAdjustType = type;
+            const btnEntry = document.getElementById('type-entry');
+            const btnExit = document.getElementById('type-exit');
+
+            if (type === 'entry') {
+                btnEntry.className = "py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition";
+                btnExit.className = "py-2 text-xs font-bold rounded-lg text-slate-400 transition";
+            } else {
+                btnEntry.className = "py-2 text-xs font-bold rounded-lg text-slate-400 transition";
+                btnExit.className = "py-2 text-xs font-bold rounded-lg bg-rose-600 text-white transition";
+            }
+        }
+
+        function quickAddValue(val) {
+            const input = document.getElementById('adjust-amount');
+            const current = parseFloat(input.value) || 0;
+            input.value = (current + val).toFixed(2);
+        }
+
+        function confirmStockAdjustment() {
+            const id = document.getElementById('adjust-prod-id').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const obs = document.getElementById('adjust-obs').value.trim();
+
+            if (!amount || amount <= 0) {
+                showToast("Digite uma quantidade válida!");
+                return;
+            }
+
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            if (currentAdjustType === 'entry') {
+                prod.stock += amount;
+            } else {
+                if (prod.stock < amount) {
+                    if(!confirm("A quantidade de saída é maior que o estoque atual. Deseja continuar assim mesmo?")) {
+                        return;
+                    }
+                }
+                prod.stock = Math.max(0, prod.stock - amount);
+            }
+
+            // Registrar Log
+            const newLog = {
+                id: Date.now().toString(),
+                prodName: prod.name,
+                type: currentAdjustType,
+                amount: amount,
+                unit: prod.unit,
+                obs: obs || (currentAdjustType === 'entry' ? 'Ajuste manual Entrada' : 'Ajuste manual Saída'),
+                date: new Date().toLocaleString("pt-BR")
+            };
+
+            logs.unshift(newLog);
+
+            saveData();
+            renderProducts();
+            renderLogs();
+            closeModal('modal-adjust');
+            showToast(`Estoque de ${prod.name} atualizado!`);
+        }
+
+        // --- RENDERIZAR HISTÓRICO DE LOGS ---
+        function renderLogs() {
+            const container = document.getElementById('logs-container');
+            container.innerHTML = '';
+
+            if (logs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhuma movimentação registrada.</p>`;
+                return;
+            }
+
+            logs.slice(0, 50).forEach(l => {
+                const isEntry = l.type === 'entry';
+                const item = document.createElement('div');
+                item.className = "bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 flex justify-between items-center text-xs";
+                
+                item.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full ${isEntry ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                            ${l.prodName}
+                        </div>
+                        <div class="text-[10px] text-slate-400">${l.date} ${l.obs ? `• ${l.obs}` : ''}</div>
+                    </div>
+                    <div class="font-bold ${isEntry ? 'text-emerald-400' : 'text-rose-400'} text-right">
+                        ${isEntry ? '+' : '-'}${parseFloat(l.amount).toFixed(2)} ${l.unit}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function clearLogs() {
+            if (confirm("Limpar todo o histórico de movimentações?")) {
+                logs = [];
+                saveData();
+                renderLogs();
+                showToast("Histórico limpo!");
+            }
+        }
+
+        // --- NAVEGAÇÃO E MODAIS HILPERS ---
+        function switchTab(tab) {
+            if (tab === 'inventory') {
+                closeModal('modal-logs');
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-brand-500";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-slate-400";
+            } else if (tab === 'logs') {
+                document.getElementById('modal-logs').classList.remove('hidden');
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-slate-400";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-brand-500";
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if (modalId === 'modal-logs') {
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-brand-500";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-slate-400";
+            }
+        }
+
+        function openBackupModal() {
+            document.getElementById('modal-backup').classList.remove('hidden');
+        }
+
+        // --- RELATÓRIO WHATSAPP ---
+        function exportWhatsAppReport() {
+            let text = `*📊 RELATÓRIO DE ESTOQUE DE CARNES*\n_Data: ${new Date().toLocaleDateString('pt-BR')}_\n\n`;
+            
+            products.forEach(p => {
+                const isLow = parseFloat(p.stock) <= parseFloat(p.minStock);
+                text += `• *${p.name}*: ${parseFloat(p.stock).toFixed(2)} ${p.unit} ${isLow ? '⚠️ *(BAIXO)*' : ''}\n`;
+            });
+
+            const totalKg = products.reduce((acc, p) => acc + (parseFloat(p.stock) || 0), 0);
+            text += `\n*Total Geral:* ${totalKg.toFixed(2)} Kg/Unid`;
+
+            const encoded = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+        }
+
+        // --- EXPORTAR / IMPORTAR BACKUP JSON ---
+        function exportJSONBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ products, logs }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup_estoque_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSONBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.products) {
+                        products = parsed.products;
+                        logs = parsed.logs || [];
+                        saveData();
+                        renderProducts();
+                        renderLogs();
+                        closeModal('modal-backup');
+                        showToast("Backup restaurado com sucesso!");
+                    } else {
+                        showToast("Arquivo de backup inválido!");
+                    }
+                } catch (err) {
+                    showToast("Erro ao ler o arquivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetDataToDemo() {
+            if(confirm("Deseja redefinir os dados para o padrão de demonstração? Seus dados atuais serão substituídos.")) {
+                products = DEMO_PRODUCTS;
+                logs = DEMO_LOGS;
+                saveData();
+                renderProducts();
+                renderLogs();
+                closeModal('modal-backup');
+                showToast("Dados padrão restaurados!");
+            }
+        }
+
+        // --- TOAST DE AVISO ---
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+``````html
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle de Estoque - Açougue & Comércio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            800: '#9f1239',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Touch scroll e UI mobile ajustes */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        /* Ocultar barra de rolagem mas manter funcionalidade */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-20 select-none">
+
+    <!-- Header fixo superior -->
+    <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-brand-600/20 text-brand-500 rounded-xl border border-brand-500/30">
+                <i data-lucide="beef" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight text-white">Estoque Carne & Cia</h1>
+                <p class="text-xs text-slate-400">Controle na palma da mão</p>
+            </div>
+        </div>
+        <div class="flex gap-1">
+            <button onclick="exportWhatsAppReport()" title="Enviar Relatório WhatsApp" class="p-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 active:scale-95 transition">
+                <i data-lucide="share-2" class="w-5 h-5"></i>
+            </button>
+            <button onclick="openBackupModal()" title="Backup e Dados" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 transition">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo principal -->
+    <main class="p-4 max-w-lg mx-auto space-y-4">
+
+        <!-- Cards de Resumo (Dashboard) -->
+        <section class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Itens</span>
+                <span id="stat-total-items" class="text-xl font-black text-white mt-0.5">0</span>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Total em Kg</span>
+                <span id="stat-total-weight" class="text-xl font-black text-emerald-400 mt-0.5">0.0</span>
+            </div>
+            <div onclick="filterLowStockToggle()" class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center cursor-pointer active:bg-slate-800 transition relative">
+                <span class="text-xs text-slate-400 font-medium">Baixo Est.</span>
+                <span id="stat-low-stock" class="text-xl font-black text-rose-500 mt-0.5">0</span>
+                <span id="low-stock-dot" class="hidden absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            </div>
+        </section>
+
+        <!-- Barra de Busca e Filtros -->
+        <section class="space-y-2">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" placeholder="Buscar corte ou produto..." 
+                    oninput="renderProducts()"
+                    class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition">
+            </div>
+
+            <!-- Filtro de Categorias Horizontal -->
+            <div id="category-pills" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <button onclick="selectCategory('Todos')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500">
+                    Todos
+                </button>
+                <button onclick="selectCategory('Bovinos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Bovinos
+                </button>
+                <button onclick="selectCategory('Suínos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Suínos
+                </button>
+                <button onclick="selectCategory('Aves')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Aves
+                </button>
+                <button onclick="selectCategory('Embutidos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Embutidos
+                </button>
+                <button onclick="selectCategory('Outros')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Outros
+                </button>
+            </div>
+        </section>
+
+        <!-- Lista de Produtos -->
+        <section class="space-y-3" id="products-list">
+            <!-- Renderizado dinamicamente via JavaScript -->
+        </section>
+
+        <!-- Estado Vazio -->
+        <div id="empty-state" class="hidden text-center py-10 space-y-3">
+            <div class="inline-flex p-4 bg-slate-900 rounded-full border border-slate-800 text-slate-500">
+                <i data-lucide="package-open" class="w-10 h-10"></i>
+            </div>
+            <p class="text-sm text-slate-400">Nenhum produto encontrado com os filtros atuais.</p>
+        </div>
+
+    </main>
+
+    <!-- NAVEGAÇÃO FIXA INFERIOR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-30">
+        <div class="max-w-lg mx-auto flex justify-around items-center py-2 px-4">
+            <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="flex flex-col items-center gap-1 text-brand-500">
+                <i data-lucide="boxes" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Estoque</span>
+            </button>
+            
+            <button onclick="openProductModal()" class="flex items-center justify-center w-12 h-12 rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/40 active:scale-90 transition -mt-5 border-4 border-slate-950">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+
+            <button onclick="switchTab('logs')" id="tab-btn-logs" class="flex flex-col items-center gap-1 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Histórico</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: HISTÓRICO DE MOVIMENTAÇÕES -->
+    <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex flex-col justify-end">
+        <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-brand-500"></i> Histórico de Entradas e Saídas
+                </h3>
+                <button onclick="closeModal('modal-logs')" class="p-1 rounded-lg text-slate-400 active:bg-slate-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div id="logs-container" class="overflow-y-auto no-scrollbar py-3 space-y-2 flex-1 my-2">
+                <!-- Logs são gerados dinamicamente -->
+            </div>
+
+            <button onclick="clearLogs()" class="w-full py-2 text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl active:bg-rose-500/20">
+                Limpar Todo o Histórico
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRAR / EDITAR PRODUTO -->
+    <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="modal-product-title" class="font-bold text-lg text-white">Cadastrar Novo Produto</h3>
+                <button onclick="closeModal('modal-product')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <form id="product-form" onsubmit="handleSaveProduct(event)" class="space-y-3">
+                <input type="hidden" id="prod-id">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome do Corte / Produto *</label>
+                    <input type="text" id="prod-name" required placeholder="Ex: Picanha Premium, Alcatra..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Categoria *</label>
+                        <select id="prod-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Bovinos">Bovinos</option>
+                            <option value="Suínos">Suínos</option>
+                            <option value="Aves">Aves</option>
+                            <option value="Embutidos">Embutidos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Unidade *</label>
+                        <select id="prod-unit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Kg">Quilograma (Kg)</option>
+                            <option value="Unid">Unidade (Unid)</option>
+                            <option value="Pacote">Pacote</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Inicial</label>
+                        <input type="number" step="0.001" min="0" id="prod-stock" placeholder="0.000" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Mínimo (Alerta)</label>
+                        <input type="number" step="0.01" min="0" id="prod-min" placeholder="5.0" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Preço por Kg / Unidade (R$)</label>
+                    <input type="number" step="0.01" min="0" id="prod-price" placeholder="0.00" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeModal('modal-product')" class="w-1/2 py-3 rounded-xl border border-slate-800 text-slate-300 font-semibold text-sm active:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="w-1/2 py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                        Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AJUSTE RÁPIDO DE MOVIMENTAÇÃO -->
+    <div id="modal-adjust" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div>
+                    <h3 id="adjust-prod-name" class="font-bold text-base text-white">Nome do Produto</h3>
+                    <p id="adjust-prod-current" class="text-xs text-slate-400">Atual: 0 Kg</p>
+                </div>
+                <button onclick="closeModal('modal-adjust')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="adjust-prod-id">
+
+            <!-- Seleção de Operação -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button type="button" id="type-entry" onclick="setAdjustType('entry')" 
+                    class="py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition">
+                    + ENTRADA
+                </button>
+                <button type="button" id="type-exit" onclick="setAdjustType('exit')" 
+                    class="py-2 text-xs font-bold rounded-lg text-slate-400 transition">
+                    - SAÍDA
+                </button>
+            </div>
+
+            <!-- Botões de Atalho Rápido -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Atalhos de Ajuste Rápido</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="quickAddValue(0.25)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.25</button>
+                    <button onclick="quickAddValue(0.5)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.5</button>
+                    <button onclick="quickAddValue(1.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+1.0</button>
+                    <button onclick="quickAddValue(5.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+5.0</button>
+                </div>
+            </div>
+
+            <!-- Campo Digitação Livre -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Quantidade para alterar</label>
+                <input type="number" step="0.001" min="0.001" id="adjust-amount" placeholder="Digite o valor..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base text-white font-bold text-center focus:outline-none focus:border-brand-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Observação (Opcional)</label>
+                <input type="text" id="adjust-obs" placeholder="Ex: Compra fornecedor, Reposição, Venda..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+            </div>
+
+            <button onclick="confirmStockAdjustment()" class="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                Confirmar Alteração
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: BACKUP E DADOS -->
+    <div id="modal-backup" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Gerenciar Dados</h3>
+                <button onclick="closeModal('modal-backup')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">Faça o backup dos seus produtos e histórico ou restaure um arquivo baixado previamente.</p>
+
+            <div class="space-y-2">
+                <button onclick="exportJSONBackup()" class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition">
+                    <i data-lucide="download" class="w-4 h-4"></i> Baixar Arquivo Backup (JSON)
+                </button>
+
+                <label class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Importar Arquivo Backup
+                    <input type="file" id="import-file" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+                </label>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <button onclick="resetDataToDemo()" class="w-full py-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl font-semibold">
+                Restaurar Dados Exemplo (Açougue)
+            </button>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST SIMPLES -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-full border border-slate-700 shadow-2xl z-50 transition duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-brand-500"></i>
+        <span id="toast-msg">Mensagem</span>
+    </div>
+
+    <!-- SCRIPT DA APLICAÇÃO -->
+    <script>
+        // --- DADOS INICIAIS DE EXEMPLO PARA AÇOUGUE ---
+        const DEMO_PRODUCTS = [
+            { id: "1", name: "Picanha Bov. Grill", category: "Bovinos", unit: "Kg", stock: 12.5, minStock: 5.0, price: 79.90 },
+            { id: "2", name: "Alcatra com Maminha", category: "Bovinos", unit: "Kg", stock: 8.2, minStock: 10.0, price: 44.90 },
+            { id: "3", name: "Linguiça Toscana", category: "Embutidos", unit: "Kg", stock: 25.0, minStock: 8.0, price: 22.90 },
+            { id: "4", name: "Costela Suína", category: "Suínos", unit: "Kg", stock: 3.4, minStock: 6.0, price: 28.50 },
+            { id: "5", name: "Coxa e Sobrecoxa", category: "Aves", unit: "Kg", stock: 18.0, minStock: 10.0, price: 13.90 }
+        ];
+
+        const DEMO_LOGS = [
+            { id: "l1", prodName: "Picanha Bov. Grill", type: "entry", amount: 15, unit: "Kg", obs: "Carga Inicial", date: new Date().toLocaleString("pt-BR") }
+        ];
+
+        // ESTADO GLOBAL
+        let products = JSON.parse(localStorage.getItem('meat_stock_products')) || DEMO_PRODUCTS;
+        let logs = JSON.parse(localStorage.getItem('meat_stock_logs')) || DEMO_LOGS;
+        let currentCategory = 'Todos';
+        let filterOnlyLowStock = false;
+        let currentAdjustType = 'entry';
+
+        // INICIALIZAÇÃO
+        window.addEventListener('DOMContentLoaded', () => {
+            renderProducts();
+            renderLogs();
+            updateStats();
+            lucide.createIcons();
+        });
+
+        // SALVAR DADOS
+        function saveData() {
+            localStorage.setItem('meat_stock_products', JSON.stringify(products));
+            localStorage.setItem('meat_stock_logs', JSON.stringify(logs));
+            updateStats();
+        }
+
+        // --- DASHBOARD / STATS ---
+        function updateStats() {
+            const totalItems = products.length;
+            const totalWeight = products.reduce((acc, p) => acc + (parseFloat(p.stock) || 0), 0);
+            const lowStockCount = products.filter(p => parseFloat(p.stock) <= parseFloat(p.minStock)).length;
+
+            document.getElementById('stat-total-items').innerText = totalItems;
+            document.getElementById('stat-total-weight').innerText = totalWeight.toFixed(1);
+            document.getElementById('stat-low-stock').innerText = lowStockCount;
+
+            const dot = document.getElementById('low-stock-dot');
+            if(lowStockCount > 0) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+        }
+
+        // --- RENDERIZAR LISTA DE PRODUTOS ---
+        function renderProducts() {
+            const container = document.getElementById('products-list');
+            const emptyState = document.getElementById('empty-state');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+
+            let filtered = products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(searchVal);
+                const matchCategory = (currentCategory === 'Todos') || (p.category === currentCategory);
+                const matchLowStock = !filterOnlyLowStock || (parseFloat(p.stock) <= parseFloat(p.minStock));
+                return matchSearch && matchCategory && matchLowStock;
+            });
+
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach(p => {
+                const isLow = parseFloat(p.stock) <= parseFloat(p.minStock);
+                
+                const card = document.createElement('div');
+                card.className = `bg-slate-900 border ${isLow ? 'border-rose-500/50 bg-rose-950/10' : 'border-slate-800'} rounded-2xl p-4 transition space-y-3`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">${p.category}</span>
+                                ${isLow ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> Estoque Baixo</span>` : ''}
+                            </div>
+                            <h2 class="font-bold text-white text-base mt-1">${p.name}</h2>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="openProductModal('${p.id}')" class="p-2 text-slate-400 hover:text-white rounded-lg active:bg-slate-800">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteProduct('${p.id}')" class="p-2 text-rose-400/70 hover:text-rose-400 rounded-lg active:bg-slate-800">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                        <div>
+                            <span class="text-xs text-slate-400 block">Preço un/kg</span>
+                            <span class="text-sm font-semibold text-slate-200">R$ ${parseFloat(p.price || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">Em Estoque</span>
+                            <span class="text-xl font-black ${isLow ? 'text-rose-400' : 'text-emerald-400'}">${parseFloat(p.stock).toFixed(2)} <span class="text-xs font-normal text-slate-400">${p.unit}</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Botões Ação Rápida -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="openAdjustModal('${p.id}', 'entry')" class="py-2.5 px-3 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:bg-emerald-600 active:text-white transition">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Dar Entrada
+                        </button>
+                        <button onclick="openAdjustModal('${p.id}', 'exit')" class="py-2.5 px-3 bg-rose-600/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:bg-rose-600 active:text-white transition">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i> Dar Saída
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // --- FILTROS DE CATEGORIA ---
+        function selectCategory(cat) {
+            currentCategory = cat;
+            filterOnlyLowStock = false;
+            
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if(btn.innerText.trim() === cat) {
+                    btn.className = "cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500";
+                } else {
+                    btn.className = "cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800";
+                }
+            });
+
+            renderProducts();
+        }
+
+        function filterLowStockToggle() {
+            filterOnlyLowStock = !filterOnlyLowStock;
+            showToast(filterOnlyLowStock ? "Exibindo apenas Estoque Baixo" : "Exibindo todos os produtos");
+            renderProducts();
+        }
+
+        // --- MODAL DE PRODUTO (CRIAR/EDITAR) ---
+        function openProductModal(id = null) {
+            const form = document.getElementById('product-form');
+            form.reset();
+
+            if (id) {
+                const prod = products.find(p => p.id === id);
+                if (!prod) return;
+                document.getElementById('modal-product-title').innerText = "Editar Produto";
+                document.getElementById('prod-id').value = prod.id;
+                document.getElementById('prod-name').value = prod.name;
+                document.getElementById('prod-category').value = prod.category;
+                document.getElementById('prod-unit').value = prod.unit;
+                document.getElementById('prod-stock').value = prod.stock;
+                document.getElementById('prod-min').value = prod.minStock;
+                document.getElementById('prod-price').value = prod.price || '';
+            } else {
+                document.getElementById('modal-product-title').innerText = "Cadastrar Novo Produto";
+                document.getElementById('prod-id').value = '';
+            }
+
+            document.getElementById('modal-product').classList.remove('hidden');
+        }
+
+        function handleSaveProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value.trim();
+            const category = document.getElementById('prod-category').value;
+            const unit = document.getElementById('prod-unit').value;
+            const stock = parseFloat(document.getElementById('prod-stock').value) || 0;
+            const minStock = parseFloat(document.getElementById('prod-min').value) || 0;
+            const price = parseFloat(document.getElementById('prod-price').value) || 0;
+
+            if (id) {
+                // Editar existente
+                const index = products.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    products[index] = { ...products[index], name, category, unit, stock, minStock, price };
+                    showToast("Produto atualizado com sucesso!");
+                }
+            } else {
+                // Criar novo
+                const newProd = {
+                    id: Date.now().toString(),
+                    name,
+                    category,
+                    unit,
+                    stock,
+                    minStock,
+                    price
+                };
+                products.push(newProd);
+                showToast("Novo produto cadastrado!");
+            }
+
+            saveData();
+            renderProducts();
+            closeModal('modal-product');
+        }
+
+        function deleteProduct(id) {
+            if(confirm("Deseja realmente excluir este produto do estoque?")) {
+                products = products.filter(p => p.id !== id);
+                saveData();
+                renderProducts();
+                showToast("Produto removido!");
+            }
+        }
+
+        // --- MODAL DE AJUSTE RÁPIDO DE ESTOQUE ---
+        function openAdjustModal(id, type = 'entry') {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            document.getElementById('adjust-prod-id').value = prod.id;
+            document.getElementById('adjust-prod-name').innerText = prod.name;
+            document.getElementById('adjust-prod-current').innerText = `Estoque Atual: ${prod.stock.toFixed(2)} ${prod.unit}`;
+            document.getElementById('adjust-amount').value = '';
+            document.getElementById('adjust-obs').value = '';
+
+            setAdjustType(type);
+            document.getElementById('modal-adjust').classList.remove('hidden');
+        }
+
+        function setAdjustType(type) {
+            currentAdjustType = type;
+            const btnEntry = document.getElementById('type-entry');
+            const btnExit = document.getElementById('type-exit');
+
+            if (type === 'entry') {
+                btnEntry.className = "py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition";
+                btnExit.className = "py-2 text-xs font-bold rounded-lg text-slate-400 transition";
+            } else {
+                btnEntry.className = "py-2 text-xs font-bold rounded-lg text-slate-400 transition";
+                btnExit.className = "py-2 text-xs font-bold rounded-lg bg-rose-600 text-white transition";
+            }
+        }
+
+        function quickAddValue(val) {
+            const input = document.getElementById('adjust-amount');
+            const current = parseFloat(input.value) || 0;
+            input.value = (current + val).toFixed(2);
+        }
+
+        function confirmStockAdjustment() {
+            const id = document.getElementById('adjust-prod-id').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const obs = document.getElementById('adjust-obs').value.trim();
+
+            if (!amount || amount <= 0) {
+                showToast("Digite uma quantidade válida!");
+                return;
+            }
+
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            if (currentAdjustType === 'entry') {
+                prod.stock += amount;
+            } else {
+                if (prod.stock < amount) {
+                    if(!confirm("A quantidade de saída é maior que o estoque atual. Deseja continuar assim mesmo?")) {
+                        return;
+                    }
+                }
+                prod.stock = Math.max(0, prod.stock - amount);
+            }
+
+            // Registrar Log
+            const newLog = {
+                id: Date.now().toString(),
+                prodName: prod.name,
+                type: currentAdjustType,
+                amount: amount,
+                unit: prod.unit,
+                obs: obs || (currentAdjustType === 'entry' ? 'Ajuste manual Entrada' : 'Ajuste manual Saída'),
+                date: new Date().toLocaleString("pt-BR")
+            };
+
+            logs.unshift(newLog);
+
+            saveData();
+            renderProducts();
+            renderLogs();
+            closeModal('modal-adjust');
+            showToast(`Estoque de ${prod.name} atualizado!`);
+        }
+
+        // --- RENDERIZAR HISTÓRICO DE LOGS ---
+        function renderLogs() {
+            const container = document.getElementById('logs-container');
+            container.innerHTML = '';
+
+            if (logs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhuma movimentação registrada.</p>`;
+                return;
+            }
+
+            logs.slice(0, 50).forEach(l => {
+                const isEntry = l.type === 'entry';
+                const item = document.createElement('div');
+                item.className = "bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 flex justify-between items-center text-xs";
+                
+                item.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full ${isEntry ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                            ${l.prodName}
+                        </div>
+                        <div class="text-[10px] text-slate-400">${l.date} ${l.obs ? `• ${l.obs}` : ''}</div>
+                    </div>
+                    <div class="font-bold ${isEntry ? 'text-emerald-400' : 'text-rose-400'} text-right">
+                        ${isEntry ? '+' : '-'}${parseFloat(l.amount).toFixed(2)} ${l.unit}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function clearLogs() {
+            if (confirm("Limpar todo o histórico de movimentações?")) {
+                logs = [];
+                saveData();
+                renderLogs();
+                showToast("Histórico limpo!");
+            }
+        }
+
+        // --- NAVEGAÇÃO E MODAIS HILPERS ---
+        function switchTab(tab) {
+            if (tab === 'inventory') {
+                closeModal('modal-logs');
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-brand-500";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-slate-400";
+            } else if (tab === 'logs') {
+                document.getElementById('modal-logs').classList.remove('hidden');
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-slate-400";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-brand-500";
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if (modalId === 'modal-logs') {
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-brand-500";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-slate-400";
+            }
+        }
+
+        function openBackupModal() {
+            document.getElementById('modal-backup').classList.remove('hidden');
+        }
+
+        // --- RELATÓRIO WHATSAPP ---
+        function exportWhatsAppReport() {
+            let text = `*📊 RELATÓRIO DE ESTOQUE DE CARNES*\n_Data: ${new Date().toLocaleDateString('pt-BR')}_\n\n`;
+            
+            products.forEach(p => {
+                const isLow = parseFloat(p.stock) <= parseFloat(p.minStock);
+                text += `• *${p.name}*: ${parseFloat(p.stock).toFixed(2)} ${p.unit} ${isLow ? '⚠️ *(BAIXO)*' : ''}\n`;
+            });
+
+            const totalKg = products.reduce((acc, p) => acc + (parseFloat(p.stock) || 0), 0);
+            text += `\n*Total Geral:* ${totalKg.toFixed(2)} Kg/Unid`;
+
+            const encoded = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+        }
+
+        // --- EXPORTAR / IMPORTAR BACKUP JSON ---
+        function exportJSONBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ products, logs }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup_estoque_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSONBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.products) {
+                        products = parsed.products;
+                        logs = parsed.logs || [];
+                        saveData();
+                        renderProducts();
+                        renderLogs();
+                        closeModal('modal-backup');
+                        showToast("Backup restaurado com sucesso!");
+                    } else {
+                        showToast("Arquivo de backup inválido!");
+                    }
+                } catch (err) {
+                    showToast("Erro ao ler o arquivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetDataToDemo() {
+            if(confirm("Deseja redefinir os dados para o padrão de demonstração? Seus dados atuais serão substituídos.")) {
+                products = DEMO_PRODUCTS;
+                logs = DEMO_LOGS;
+                saveData();
+                renderProducts();
+                renderLogs();
+                closeModal('modal-backup');
+                showToast("Dados padrão restaurados!");
+            }
+        }
+
+        // --- TOAST DE AVISO ---
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+``````html
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle de Estoque - Açougue & Comércio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            800: '#9f1239',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Touch scroll e UI mobile ajustes */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        /* Ocultar barra de rolagem mas manter funcionalidade */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-20 select-none">
+
+    <!-- Header fixo superior -->
+    <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-brand-600/20 text-brand-500 rounded-xl border border-brand-500/30">
+                <i data-lucide="beef" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight text-white">Estoque Carne & Cia</h1>
+                <p class="text-xs text-slate-400">Controle na palma da mão</p>
+            </div>
+        </div>
+        <div class="flex gap-1">
+            <button onclick="exportWhatsAppReport()" title="Enviar Relatório WhatsApp" class="p-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 active:scale-95 transition">
+                <i data-lucide="share-2" class="w-5 h-5"></i>
+            </button>
+            <button onclick="openBackupModal()" title="Backup e Dados" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 transition">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo principal -->
+    <main class="p-4 max-w-lg mx-auto space-y-4">
+
+        <!-- Cards de Resumo (Dashboard) -->
+        <section class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Itens</span>
+                <span id="stat-total-items" class="text-xl font-black text-white mt-0.5">0</span>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center">
+                <span class="text-xs text-slate-400 font-medium">Total em Kg</span>
+                <span id="stat-total-weight" class="text-xl font-black text-emerald-400 mt-0.5">0.0</span>
+            </div>
+            <div onclick="filterLowStockToggle()" class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex flex-col items-center text-center cursor-pointer active:bg-slate-800 transition relative">
+                <span class="text-xs text-slate-400 font-medium">Baixo Est.</span>
+                <span id="stat-low-stock" class="text-xl font-black text-rose-500 mt-0.5">0</span>
+                <span id="low-stock-dot" class="hidden absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            </div>
+        </section>
+
+        <!-- Barra de Busca e Filtros -->
+        <section class="space-y-2">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" placeholder="Buscar corte ou produto..." 
+                    oninput="renderProducts()"
+                    class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition">
+            </div>
+
+            <!-- Filtro de Categorias Horizontal -->
+            <div id="category-pills" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <button onclick="selectCategory('Todos')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500">
+                    Todos
+                </button>
+                <button onclick="selectCategory('Bovinos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Bovinos
+                </button>
+                <button onclick="selectCategory('Suínos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Suínos
+                </button>
+                <button onclick="selectCategory('Aves')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Aves
+                </button>
+                <button onclick="selectCategory('Embutidos')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Embutidos
+                </button>
+                <button onclick="selectCategory('Outros')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800">
+                    Outros
+                </button>
+            </div>
+        </section>
+
+        <!-- Lista de Produtos -->
+        <section class="space-y-3" id="products-list">
+            <!-- Renderizado dinamicamente via JavaScript -->
+        </section>
+
+        <!-- Estado Vazio -->
+        <div id="empty-state" class="hidden text-center py-10 space-y-3">
+            <div class="inline-flex p-4 bg-slate-900 rounded-full border border-slate-800 text-slate-500">
+                <i data-lucide="package-open" class="w-10 h-10"></i>
+            </div>
+            <p class="text-sm text-slate-400">Nenhum produto encontrado com os filtros atuais.</p>
+        </div>
+
+    </main>
+
+    <!-- NAVEGAÇÃO FIXA INFERIOR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-30">
+        <div class="max-w-lg mx-auto flex justify-around items-center py-2 px-4">
+            <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="flex flex-col items-center gap-1 text-brand-500">
+                <i data-lucide="boxes" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Estoque</span>
+            </button>
+            
+            <button onclick="openProductModal()" class="flex items-center justify-center w-12 h-12 rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/40 active:scale-90 transition -mt-5 border-4 border-slate-950">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+
+            <button onclick="switchTab('logs')" id="tab-btn-logs" class="flex flex-col items-center gap-1 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">Histórico</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: HISTÓRICO DE MOVIMENTAÇÕES -->
+    <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex flex-col justify-end">
+        <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-brand-500"></i> Histórico de Entradas e Saídas
+                </h3>
+                <button onclick="closeModal('modal-logs')" class="p-1 rounded-lg text-slate-400 active:bg-slate-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div id="logs-container" class="overflow-y-auto no-scrollbar py-3 space-y-2 flex-1 my-2">
+                <!-- Logs são gerados dinamicamente -->
+            </div>
+
+            <button onclick="clearLogs()" class="w-full py-2 text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl active:bg-rose-500/20">
+                Limpar Todo o Histórico
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRAR / EDITAR PRODUTO -->
+    <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="modal-product-title" class="font-bold text-lg text-white">Cadastrar Novo Produto</h3>
+                <button onclick="closeModal('modal-product')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <form id="product-form" onsubmit="handleSaveProduct(event)" class="space-y-3">
+                <input type="hidden" id="prod-id">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome do Corte / Produto *</label>
+                    <input type="text" id="prod-name" required placeholder="Ex: Picanha Premium, Alcatra..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Categoria *</label>
+                        <select id="prod-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Bovinos">Bovinos</option>
+                            <option value="Suínos">Suínos</option>
+                            <option value="Aves">Aves</option>
+                            <option value="Embutidos">Embutidos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Unidade *</label>
+                        <select id="prod-unit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                            <option value="Kg">Quilograma (Kg)</option>
+                            <option value="Unid">Unidade (Unid)</option>
+                            <option value="Pacote">Pacote</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Inicial</label>
+                        <input type="number" step="0.001" min="0" id="prod-stock" placeholder="0.000" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Estoque Mínimo (Alerta)</label>
+                        <input type="number" step="0.01" min="0" id="prod-min" placeholder="5.0" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Preço por Kg / Unidade (R$)</label>
+                    <input type="number" step="0.01" min="0" id="prod-price" placeholder="0.00" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeModal('modal-product')" class="w-1/2 py-3 rounded-xl border border-slate-800 text-slate-300 font-semibold text-sm active:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="w-1/2 py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                        Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AJUSTE RÁPIDO DE MOVIMENTAÇÃO -->
+    <div id="modal-adjust" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div>
+                    <h3 id="adjust-prod-name" class="font-bold text-base text-white">Nome do Produto</h3>
+                    <p id="adjust-prod-current" class="text-xs text-slate-400">Atual: 0 Kg</p>
+                </div>
+                <button onclick="closeModal('modal-adjust')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="adjust-prod-id">
+
+            <!-- Seleção de Operação -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button type="button" id="type-entry" onclick="setAdjustType('entry')" 
+                    class="py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition">
+                    + ENTRADA
+                </button>
+                <button type="button" id="type-exit" onclick="setAdjustType('exit')" 
+                    class="py-2 text-xs font-bold rounded-lg text-slate-400 transition">
+                    - SAÍDA
+                </button>
+            </div>
+
+            <!-- Botões de Atalho Rápido -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Atalhos de Ajuste Rápido</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="quickAddValue(0.25)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.25</button>
+                    <button onclick="quickAddValue(0.5)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+0.5</button>
+                    <button onclick="quickAddValue(1.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+1.0</button>
+                    <button onclick="quickAddValue(5.0)" class="py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg border border-slate-700 text-slate-200">+5.0</button>
+                </div>
+            </div>
+
+            <!-- Campo Digitação Livre -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Quantidade para alterar</label>
+                <input type="number" step="0.001" min="0.001" id="adjust-amount" placeholder="Digite o valor..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base text-white font-bold text-center focus:outline-none focus:border-brand-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Observação (Opcional)</label>
+                <input type="text" id="adjust-obs" placeholder="Ex: Compra fornecedor, Reposição, Venda..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+            </div>
+
+            <button onclick="confirmStockAdjustment()" class="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 active:scale-95 transition">
+                Confirmar Alteração
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: BACKUP E DADOS -->
+    <div id="modal-backup" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Gerenciar Dados</h3>
+                <button onclick="closeModal('modal-backup')" class="text-slate-400 p-1 active:bg-slate-800 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">Faça o backup dos seus produtos e histórico ou restaure um arquivo baixado previamente.</p>
+
+            <div class="space-y-2">
+                <button onclick="exportJSONBackup()" class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition">
+                    <i data-lucide="download" class="w-4 h-4"></i> Baixar Arquivo Backup (JSON)
+                </button>
+
+                <label class="w-full py-2.5 px-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Importar Arquivo Backup
+                    <input type="file" id="import-file" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+                </label>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <button onclick="resetDataToDemo()" class="w-full py-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl font-semibold">
+                Restaurar Dados Exemplo (Açougue)
+            </button>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST SIMPLES -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-full border border-slate-700 shadow-2xl z-50 transition duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-brand-500"></i>
+        <span id="toast-msg">Mensagem</span>
+    </div>
+
+    <!-- SCRIPT DA APLICAÇÃO -->
+    <script>
+        // --- DADOS INICIAIS DE EXEMPLO PARA AÇOUGUE ---
+        const DEMO_PRODUCTS = [
+            { id: "1", name: "Picanha Bov. Grill", category: "Bovinos", unit: "Kg", stock: 12.5, minStock: 5.0, price: 79.90 },
+            { id: "2", name: "Alcatra com Maminha", category: "Bovinos", unit: "Kg", stock: 8.2, minStock: 10.0, price: 44.90 },
+            { id: "3", name: "Linguiça Toscana", category: "Embutidos", unit: "Kg", stock: 25.0, minStock: 8.0, price: 22.90 },
+            { id: "4", name: "Costela Suína", category: "Suínos", unit: "Kg", stock: 3.4, minStock: 6.0, price: 28.50 },
+            { id: "5", name: "Coxa e Sobrecoxa", category: "Aves", unit: "Kg", stock: 18.0, minStock: 10.0, price: 13.90 }
+        ];
+
+        const DEMO_LOGS = [
+            { id: "l1", prodName: "Picanha Bov. Grill", type: "entry", amount: 15, unit: "Kg", obs: "Carga Inicial", date: new Date().toLocaleString("pt-BR") }
+        ];
+
+        // ESTADO GLOBAL
+        let products = JSON.parse(localStorage.getItem('meat_stock_products')) || DEMO_PRODUCTS;
+        let logs = JSON.parse(localStorage.getItem('meat_stock_logs')) || DEMO_LOGS;
+        let currentCategory = 'Todos';
+        let filterOnlyLowStock = false;
+        let currentAdjustType = 'entry';
+
+        // INICIALIZAÇÃO
+        window.addEventListener('DOMContentLoaded', () => {
+            renderProducts();
+            renderLogs();
+            updateStats();
+            lucide.createIcons();
+        });
+
+        // SALVAR DADOS
+        function saveData() {
+            localStorage.setItem('meat_stock_products', JSON.stringify(products));
+            localStorage.setItem('meat_stock_logs', JSON.stringify(logs));
+            updateStats();
+        }
+
+        // --- DASHBOARD / STATS ---
+        function updateStats() {
+            const totalItems = products.length;
+            const totalWeight = products.reduce((acc, p) => acc + (parseFloat(p.stock) || 0), 0);
+            const lowStockCount = products.filter(p => parseFloat(p.stock) <= parseFloat(p.minStock)).length;
+
+            document.getElementById('stat-total-items').innerText = totalItems;
+            document.getElementById('stat-total-weight').innerText = totalWeight.toFixed(1);
+            document.getElementById('stat-low-stock').innerText = lowStockCount;
+
+            const dot = document.getElementById('low-stock-dot');
+            if(lowStockCount > 0) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+        }
+
+        // --- RENDERIZAR LISTA DE PRODUTOS ---
+        function renderProducts() {
+            const container = document.getElementById('products-list');
+            const emptyState = document.getElementById('empty-state');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+
+            let filtered = products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(searchVal);
+                const matchCategory = (currentCategory === 'Todos') || (p.category === currentCategory);
+                const matchLowStock = !filterOnlyLowStock || (parseFloat(p.stock) <= parseFloat(p.minStock));
+                return matchSearch && matchCategory && matchLowStock;
+            });
+
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach(p => {
+                const isLow = parseFloat(p.stock) <= parseFloat(p.minStock);
+                
+                const card = document.createElement('div');
+                card.className = `bg-slate-900 border ${isLow ? 'border-rose-500/50 bg-rose-950/10' : 'border-slate-800'} rounded-2xl p-4 transition space-y-3`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">${p.category}</span>
+                                ${isLow ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> Estoque Baixo</span>` : ''}
+                            </div>
+                            <h2 class="font-bold text-white text-base mt-1">${p.name}</h2>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="openProductModal('${p.id}')" class="p-2 text-slate-400 hover:text-white rounded-lg active:bg-slate-800">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteProduct('${p.id}')" class="p-2 text-rose-400/70 hover:text-rose-400 rounded-lg active:bg-slate-800">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                        <div>
+                            <span class="text-xs text-slate-400 block">Preço un/kg</span>
+                            <span class="text-sm font-semibold text-slate-200">R$ ${parseFloat(p.price || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">Em Estoque</span>
+                            <span class="text-xl font-black ${isLow ? 'text-rose-400' : 'text-emerald-400'}">${parseFloat(p.stock).toFixed(2)} <span class="text-xs font-normal text-slate-400">${p.unit}</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Botões Ação Rápida -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="openAdjustModal('${p.id}', 'entry')" class="py-2.5 px-3 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:bg-emerald-600 active:text-white transition">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Dar Entrada
+                        </button>
+                        <button onclick="openAdjustModal('${p.id}', 'exit')" class="py-2.5 px-3 bg-rose-600/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:bg-rose-600 active:text-white transition">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i> Dar Saída
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // --- FILTROS DE CATEGORIA ---
+        function selectCategory(cat) {
+            currentCategory = cat;
+            filterOnlyLowStock = false;
+            
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if(btn.innerText.trim() === cat) {
+                    btn.className = "cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-brand-600 text-white border-brand-500";
+                } else {
+                    btn.className = "cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border bg-slate-900 text-slate-400 border-slate-800";
+                }
+            });
+
+            renderProducts();
+        }
+
+        function filterLowStockToggle() {
+            filterOnlyLowStock = !filterOnlyLowStock;
+            showToast(filterOnlyLowStock ? "Exibindo apenas Estoque Baixo" : "Exibindo todos os produtos");
+            renderProducts();
+        }
+
+        // --- MODAL DE PRODUTO (CRIAR/EDITAR) ---
+        function openProductModal(id = null) {
+            const form = document.getElementById('product-form');
+            form.reset();
+
+            if (id) {
+                const prod = products.find(p => p.id === id);
+                if (!prod) return;
+                document.getElementById('modal-product-title').innerText = "Editar Produto";
+                document.getElementById('prod-id').value = prod.id;
+                document.getElementById('prod-name').value = prod.name;
+                document.getElementById('prod-category').value = prod.category;
+                document.getElementById('prod-unit').value = prod.unit;
+                document.getElementById('prod-stock').value = prod.stock;
+                document.getElementById('prod-min').value = prod.minStock;
+                document.getElementById('prod-price').value = prod.price || '';
+            } else {
+                document.getElementById('modal-product-title').innerText = "Cadastrar Novo Produto";
+                document.getElementById('prod-id').value = '';
+            }
+
+            document.getElementById('modal-product').classList.remove('hidden');
+        }
+
+        function handleSaveProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value.trim();
+            const category = document.getElementById('prod-category').value;
+            const unit = document.getElementById('prod-unit').value;
+            const stock = parseFloat(document.getElementById('prod-stock').value) || 0;
+            const minStock = parseFloat(document.getElementById('prod-min').value) || 0;
+            const price = parseFloat(document.getElementById('prod-price').value) || 0;
+
+            if (id) {
+                // Editar existente
+                const index = products.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    products[index] = { ...products[index], name, category, unit, stock, minStock, price };
+                    showToast("Produto atualizado com sucesso!");
+                }
+            } else {
+                // Criar novo
+                const newProd = {
+                    id: Date.now().toString(),
+                    name,
+                    category,
+                    unit,
+                    stock,
+                    minStock,
+                    price
+                };
+                products.push(newProd);
+                showToast("Novo produto cadastrado!");
+            }
+
+            saveData();
+            renderProducts();
+            closeModal('modal-product');
+        }
+
+        function deleteProduct(id) {
+            if(confirm("Deseja realmente excluir este produto do estoque?")) {
+                products = products.filter(p => p.id !== id);
+                saveData();
+                renderProducts();
+                showToast("Produto removido!");
+            }
+        }
+
+        // --- MODAL DE AJUSTE RÁPIDO DE ESTOQUE ---
+        function openAdjustModal(id, type = 'entry') {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            document.getElementById('adjust-prod-id').value = prod.id;
+            document.getElementById('adjust-prod-name').innerText = prod.name;
+            document.getElementById('adjust-prod-current').innerText = `Estoque Atual: ${prod.stock.toFixed(2)} ${prod.unit}`;
+            document.getElementById('adjust-amount').value = '';
+            document.getElementById('adjust-obs').value = '';
+
+            setAdjustType(type);
+            document.getElementById('modal-adjust').classList.remove('hidden');
+        }
+
+        function setAdjustType(type) {
+            currentAdjustType = type;
+            const btnEntry = document.getElementById('type-entry');
+            const btnExit = document.getElementById('type-exit');
+
+            if (type === 'entry') {
+                btnEntry.className = "py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white transition";
+                btnExit.className = "py-2 text-xs font-bold rounded-lg text-slate-400 transition";
+            } else {
+                btnEntry.className = "py-2 text-xs font-bold rounded-lg text-slate-400 transition";
+                btnExit.className = "py-2 text-xs font-bold rounded-lg bg-rose-600 text-white transition";
+            }
+        }
+
+        function quickAddValue(val) {
+            const input = document.getElementById('adjust-amount');
+            const current = parseFloat(input.value) || 0;
+            input.value = (current + val).toFixed(2);
+        }
+
+        function confirmStockAdjustment() {
+            const id = document.getElementById('adjust-prod-id').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const obs = document.getElementById('adjust-obs').value.trim();
+
+            if (!amount || amount <= 0) {
+                showToast("Digite uma quantidade válida!");
+                return;
+            }
+
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            if (currentAdjustType === 'entry') {
+                prod.stock += amount;
+            } else {
+                if (prod.stock < amount) {
+                    if(!confirm("A quantidade de saída é maior que o estoque atual. Deseja continuar assim mesmo?")) {
+                        return;
+                    }
+                }
+                prod.stock = Math.max(0, prod.stock - amount);
+            }
+
+            // Registrar Log
+            const newLog = {
+                id: Date.now().toString(),
+                prodName: prod.name,
+                type: currentAdjustType,
+                amount: amount,
+                unit: prod.unit,
+                obs: obs || (currentAdjustType === 'entry' ? 'Ajuste manual Entrada' : 'Ajuste manual Saída'),
+                date: new Date().toLocaleString("pt-BR")
+            };
+
+            logs.unshift(newLog);
+
+            saveData();
+            renderProducts();
+            renderLogs();
+            closeModal('modal-adjust');
+            showToast(`Estoque de ${prod.name} atualizado!`);
+        }
+
+        // --- RENDERIZAR HISTÓRICO DE LOGS ---
+        function renderLogs() {
+            const container = document.getElementById('logs-container');
+            container.innerHTML = '';
+
+            if (logs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhuma movimentação registrada.</p>`;
+                return;
+            }
+
+            logs.slice(0, 50).forEach(l => {
+                const isEntry = l.type === 'entry';
+                const item = document.createElement('div');
+                item.className = "bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 flex justify-between items-center text-xs";
+                
+                item.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full ${isEntry ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                            ${l.prodName}
+                        </div>
+                        <div class="text-[10px] text-slate-400">${l.date} ${l.obs ? `• ${l.obs}` : ''}</div>
+                    </div>
+                    <div class="font-bold ${isEntry ? 'text-emerald-400' : 'text-rose-400'} text-right">
+                        ${isEntry ? '+' : '-'}${parseFloat(l.amount).toFixed(2)} ${l.unit}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function clearLogs() {
+            if (confirm("Limpar todo o histórico de movimentações?")) {
+                logs = [];
+                saveData();
+                renderLogs();
+                showToast("Histórico limpo!");
+            }
+        }
+
+        // --- NAVEGAÇÃO E MODAIS HILPERS ---
+        function switchTab(tab) {
+            if (tab === 'inventory') {
+                closeModal('modal-logs');
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-brand-500";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-slate-400";
+            } else if (tab === 'logs') {
+                document.getElementById('modal-logs').classList.remove('hidden');
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-slate-400";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-brand-500";
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if (modalId === 'modal-logs') {
+                document.getElementById('tab-btn-inventory').className = "flex flex-col items-center gap-1 text-brand-500";
+                document.getElementById('tab-btn-logs').className = "flex flex-col items-center gap-1 text-slate-400";
+            }
+        }
+
+        function openBackupModal() {
+            document.getElementById('modal-backup').classList.remove('hidden');
+        }
+
+        // --- RELATÓRIO WHATSAPP ---
+        function exportWhatsAppReport() {
+            let text = `*📊 RELATÓRIO DE ESTOQUE DE CARNES*\n_Data: ${new Date().toLocaleDateString('pt-BR')}_\n\n`;
+            
+            products.forEach(p => {
+                const isLow = parseFloat(p.stock) <= parseFloat(p.minStock);
+                text += `• *${p.name}*: ${parseFloat(p.stock).toFixed(2)} ${p.unit} ${isLow ? '⚠️ *(BAIXO)*' : ''}\n`;
+            });
+
+            const totalKg = products.reduce((acc, p) => acc + (parseFloat(p.stock) || 0), 0);
+            text += `\n*Total Geral:* ${totalKg.toFixed(2)} Kg/Unid`;
+
+            const encoded = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+        }
+
+        // --- EXPORTAR / IMPORTAR BACKUP JSON ---
+        function exportJSONBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ products, logs }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup_estoque_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSONBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.products) {
+                        products = parsed.products;
+                        logs = parsed.logs || [];
+                        saveData();
+                        renderProducts();
+                        renderLogs();
+                        closeModal('modal-backup');
+                        showToast("Backup restaurado com sucesso!");
+                    } else {
+                        showToast("Arquivo de backup inválido!");
+                    }
+                } catch (err) {
+                    showToast("Erro ao ler o arquivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetDataToDemo() {
+            if(confirm("Deseja redefinir os dados para o padrão de demonstração? Seus dados atuais serão substituídos.")) {
+                products = DEMO_PRODUCTS;
+                logs = DEMO_LOGS;
+                saveData();
+                renderProducts();
+                renderLogs();
+                closeModal('modal-backup');
+                showToast("Dados padrão restaurados!");
+            }
+        }
+
+        // --- TOAST DE AVISO ---
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyA0LVrHP2EwbV5zDe-_sO1K3hw_8mEfFFY",
+  authDomain: "estoque-de-paiol.firebaseapp.com",
+  databaseURL: "https://estoque-de-paiol-default-rtdb.firebaseio.com",
+  projectId: "estoque-de-paiol",
+  storageBucket: "estoque-de-paiol.firebasestorage.app",
+  messagingSenderId: "111633592675",
+  appId: "1:111633592675:web:62019a246c5a9fec75e356",
+  measurementId: "G-G7RB2WZ5RF"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
